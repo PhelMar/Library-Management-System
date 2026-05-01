@@ -357,25 +357,29 @@ namespace LibrarySystem.Forms.Borrow
 
             if (col == "colReturn")
             {
-                DataGridViewButtonCell btnCell =
-                    dgvTransactions.Rows[e.RowIndex].Cells[e.ColumnIndex] as DataGridViewButtonCell;
-                if (btnCell != null && btnCell.Value != null && btnCell.Value.ToString() == "--")
-                    return;
+                var btnCell = dgvTransactions.Rows[e.RowIndex].Cells[e.ColumnIndex] as DataGridViewButtonCell;
+                if (btnCell != null && btnCell.Value?.ToString() == "--") return;
 
-                DialogResult confirmResult = MessageHelper.ShowConfirm(
-                    "Mark this book as returned?\nThis will restore the book's available quantity.");
+                int? fineAmount = _repo.GetFineAmountForReturn(transactionId);
 
-                if (confirmResult == DialogResult.Yes)
+                string confirmMsg = fineAmount.HasValue
+                    ? $"This book is overdue!\n\nA fine of ₱{fineAmount.Value:N2} will be recorded.\n\nMark as returned and record fine?"
+                    : "Mark this book as returned?\nThis will restore the book's available quantity.";
+
+                if (MessageHelper.ShowConfirm(confirmMsg) == DialogResult.Yes)
                 {
                     try
                     {
                         _repo.ReturnBook(transactionId, null);
-                        MessageHelper.ShowSuccess("Book marked as returned successfully.");
+                        string successMsg = fineAmount.HasValue
+                            ? $"Book returned. Fine of ₱{fineAmount.Value:N2} has been recorded as unpaid."
+                            : "Book marked as returned successfully.";
+                        MessageHelper.ShowSuccess(successMsg);
                         LoadTransactions();
                     }
                     catch (Exception ex)
                     {
-                        MessageHelper.ShowError("Failed to process return: " + ex.Message);
+                        MessageHelper.ShowError("Failed to process return. Please try again.\n\nDetails: " + ex.Message);
                     }
                 }
             }

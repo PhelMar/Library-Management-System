@@ -23,8 +23,8 @@ namespace LibrarySystem.Forms.Students
         private int _totalPages = 1;
         private const int PAGE_SIZE = 10;
 
-
         private const int EM_SETCUEBANNER = 0x1501;
+
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, string lParam);
 
@@ -48,18 +48,13 @@ namespace LibrarySystem.Forms.Students
                 BackColor = Color.Transparent
             };
 
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70f));  // Title + active period
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 55f));  // Search + Add
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));  // Table
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 45f));  // Pagination
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70f));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 55f));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 45f));
             mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
 
-            // ── Row 0: Title ──────────────────────────────
-            var titlePanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.Transparent
-            };
+            var titlePanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
 
             var lblTitle = new Label
             {
@@ -70,17 +65,16 @@ namespace LibrarySystem.Forms.Students
                 AutoSize = true
             };
 
-            // Show active school year and semester
             var period = _studentRepo.GetActivePeriod();
             lblActivePeriod = new Label
             {
                 Text = period.schoolYearId > 0
-                            ? $"Active: {period.schoolYearLabel}  |  {period.semesterName}"
-                            : "⚠ No active school year or semester set!",
+                    ? $"Active: {period.schoolYearLabel}  |  {period.semesterName}"
+                    : "⚠ No active school year found!",
                 Font = new Font("Segoe UI", 9f),
                 ForeColor = period.schoolYearId > 0
-                            ? Color.FromArgb(39, 174, 96)
-                            : Color.FromArgb(231, 76, 60),
+                    ? Color.FromArgb(39, 174, 96)
+                    : Color.FromArgb(231, 76, 60),
                 Location = new Point(2, 45),
                 AutoSize = true
             };
@@ -88,22 +82,16 @@ namespace LibrarySystem.Forms.Students
             titlePanel.Controls.Add(lblTitle);
             titlePanel.Controls.Add(lblActivePeriod);
 
-            // ── Row 1: Search + Add ───────────────────────
-            var topBar = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.Transparent
-            };
+            var topBar = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
 
             txtSearch = new TextBox
-            {   
+            {
                 Font = new Font("Segoe UI", 10f),
                 Location = new Point(0, 10),
                 Size = new Size(320, 32),
                 BorderStyle = BorderStyle.FixedSingle
             };
             SetCueBanner(txtSearch, "Search by student ID, name or course...");
-
             txtSearch.TextChanged += (s, e) => { _currentPage = 1; LoadStudents(); };
 
             btnAddStudent = new Button
@@ -123,7 +111,6 @@ namespace LibrarySystem.Forms.Students
             topBar.Controls.Add(txtSearch);
             topBar.Controls.Add(btnAddStudent);
 
-            // ── Row 2: DataGridView ───────────────────────
             dgvStudents = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -165,41 +152,23 @@ namespace LibrarySystem.Forms.Students
                 SelectionForeColor = Color.FromArgb(40, 30, 80)
             };
 
-            // Columns
-            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colNo", HeaderText = "No.", FillWeight = 5 });
-            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colStudentId", HeaderText = "Student ID", FillWeight = 15 });
-            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colName", HeaderText = "Full Name", FillWeight = 25 });
-            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colCourse", HeaderText = "Course", FillWeight = 15 });
-            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colYear", HeaderText = "Year Level", FillWeight = 12 });
-            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colSemester", HeaderText = "Semester", FillWeight = 13 });
-            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colSY", HeaderText = "School Year", FillWeight = 13 });
+            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colNo", HeaderText = "No.", FillWeight = 4 });
+            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colStudentId", HeaderText = "Student ID", FillWeight = 12 });
+            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colName", HeaderText = "Full Name", FillWeight = 22 });
+            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colCourse", HeaderText = "Course", FillWeight = 12 });
+            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colYear", HeaderText = "Year Level", FillWeight = 10 });
+            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colSemester", HeaderText = "Semester", FillWeight = 11 });
+            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colSY", HeaderText = "School Year", FillWeight = 10 });
+            dgvStudents.Columns.Add(new DataGridViewTextBoxColumn { Name = "colStatus", HeaderText = "Status", FillWeight = 10 });
 
-            dgvStudents.Columns.Add(new DataGridViewButtonColumn
-            {
-                Name = "colEdit",
-                HeaderText = "",
-                Text = "Edit",
-                UseColumnTextForButtonValue = true,
-                FillWeight = 8
-            });
-            dgvStudents.Columns.Add(new DataGridViewButtonColumn
-            {
-                Name = "colDelete",
-                HeaderText = "",
-                Text = "Delete",
-                UseColumnTextForButtonValue = true,
-                FillWeight = 8
-            });
+            dgvStudents.Columns.Add(new DataGridViewButtonColumn { Name = "colEdit", HeaderText = "", Text = "Edit", UseColumnTextForButtonValue = true, FillWeight = 7 });
+            dgvStudents.Columns.Add(new DataGridViewButtonColumn { Name = "colDrop", HeaderText = "", Text = "Drop", UseColumnTextForButtonValue = true, FillWeight = 7 });
+            dgvStudents.Columns.Add(new DataGridViewButtonColumn { Name = "colGraduate", HeaderText = "", Text = "Graduate", UseColumnTextForButtonValue = true, FillWeight = 9 });
 
             dgvStudents.CellContentClick += DgvStudents_CellContentClick;
             dgvStudents.CellFormatting += DgvStudents_CellFormatting;
 
-            // ── Row 3: Pagination ─────────────────────────
-            var paginationPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.Transparent
-            };
+            var paginationPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
 
             btnPrev = new Button
             {
@@ -242,7 +211,6 @@ namespace LibrarySystem.Forms.Students
             paginationPanel.Controls.Add(lblPagination);
             paginationPanel.Controls.Add(btnNext);
 
-            // ── Assemble ──────────────────────────────────
             mainLayout.Controls.Add(titlePanel, 0, 0);
             mainLayout.Controls.Add(topBar, 0, 1);
             mainLayout.Controls.Add(dgvStudents, 0, 2);
@@ -266,6 +234,8 @@ namespace LibrarySystem.Forms.Students
                 int rowNo = (_currentPage - 1) * PAGE_SIZE + 1;
                 foreach (DataRow row in result.Rows)
                 {
+                    string status = row["status"].ToString();
+
                     int index = dgvStudents.Rows.Add(
                         rowNo++,
                         row["student_code"],
@@ -274,10 +244,10 @@ namespace LibrarySystem.Forms.Students
                         row["level_name"],
                         row["semester_name"],
                         row["year_label"],
-                        "Edit", "Delete"
+                        status,
+                        "Edit", "Drop", "Graduate"
                     );
 
-                    // Store both student db id and enrollment id in Tag
                     dgvStudents.Rows[index].Tag = new int[]
                     {
                         Convert.ToInt32(row["id"]),
@@ -291,7 +261,7 @@ namespace LibrarySystem.Forms.Students
             }
             catch (Exception ex)
             {
-                MessageHelper.ShowError("Failed to load students: " + ex.Message);
+                MessageHelper.ShowError("Unable to load students. Please try again.\n\nDetails: " + ex.Message);
             }
         }
 
@@ -299,17 +269,42 @@ namespace LibrarySystem.Forms.Students
         {
             if (e.RowIndex < 0) return;
 
-            var colName = dgvStudents.Columns[e.ColumnIndex].Name;
+            string col = dgvStudents.Columns[e.ColumnIndex].Name;
 
-            if (colName == "colEdit")
+            if (col == "colStatus")
+            {
+                string status = dgvStudents.Rows[e.RowIndex].Cells[e.ColumnIndex].Value?.ToString() ?? "";
+
+                if (status == "enrolled")
+                {
+                    e.CellStyle.ForeColor = Color.FromArgb(39, 174, 96);
+                    e.CellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+                }
+                else if (status == "dropped")
+                {
+                    e.CellStyle.ForeColor = Color.FromArgb(231, 76, 60);
+                    e.CellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+                }
+                else if (status == "graduated")
+                {
+                    e.CellStyle.ForeColor = Color.FromArgb(52, 152, 219);
+                    e.CellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+                }
+            }
+            else if (col == "colEdit")
             {
                 var cell = dgvStudents.Rows[e.RowIndex].Cells[e.ColumnIndex] as DataGridViewButtonCell;
                 if (cell != null) { cell.Style.BackColor = Color.FromArgb(230, 126, 34); cell.Style.ForeColor = Color.White; }
             }
-            else if (colName == "colDelete")
+            else if (col == "colDrop")
             {
                 var cell = dgvStudents.Rows[e.RowIndex].Cells[e.ColumnIndex] as DataGridViewButtonCell;
                 if (cell != null) { cell.Style.BackColor = Color.FromArgb(231, 76, 60); cell.Style.ForeColor = Color.White; }
+            }
+            else if (col == "colGraduate")
+            {
+                var cell = dgvStudents.Rows[e.RowIndex].Cells[e.ColumnIndex] as DataGridViewButtonCell;
+                if (cell != null) { cell.Style.BackColor = Color.FromArgb(52, 152, 219); cell.Style.ForeColor = Color.White; }
             }
         }
 
@@ -320,30 +315,64 @@ namespace LibrarySystem.Forms.Students
             var ids = (int[])dgvStudents.Rows[e.RowIndex].Tag;
             int studentDbId = ids[0];
             int enrollmentId = ids[1];
-            string colName = dgvStudents.Columns[e.ColumnIndex].Name;
+            string studentName = dgvStudents.Rows[e.RowIndex].Cells["colName"].Value?.ToString();
+            string col = dgvStudents.Columns[e.ColumnIndex].Name;
 
-            if (colName == "colEdit")
+            if (col == "colEdit")
             {
                 var form = new StudentAddEditForm(studentDbId, enrollmentId);
                 form.FormClosed += (s, ev) => LoadStudents();
                 form.ShowDialog();
             }
-            else if (colName == "colDelete")
+            else if (col == "colDrop")
             {
+                string currentStatus = dgvStudents.Rows[e.RowIndex].Cells["colStatus"].Value?.ToString();
+                if (currentStatus == "dropped")
+                {
+                    MessageHelper.ShowWarning($"{studentName} is already marked as dropped.");
+                    return;
+                }
+
                 var confirm = MessageHelper.ShowConfirm(
-                    "Delete this student?\nThis will also remove all their enrollment records.");
+                    $"Mark \"{studentName}\" as Dropped?\n\nThis will update their enrollment status for this semester.");
 
                 if (confirm == DialogResult.Yes)
                 {
                     try
                     {
-                        _studentRepo.DeleteStudent(studentDbId);
-                        MessageHelper.ShowSuccess("Student deleted successfully.");
+                        _studentRepo.UpdateEnrollmentStatus(enrollmentId, "dropped");
+                        MessageHelper.ShowSuccess($"{studentName} has been marked as dropped.");
                         LoadStudents();
                     }
                     catch (Exception ex)
                     {
-                        MessageHelper.ShowError("Failed to delete: " + ex.Message);
+                        MessageHelper.ShowError("Unable to update status. Please try again.\n\nDetails: " + ex.Message);
+                    }
+                }
+            }
+            else if (col == "colGraduate")
+            {
+                string currentStatus = dgvStudents.Rows[e.RowIndex].Cells["colStatus"].Value?.ToString();
+                if (currentStatus == "graduated")
+                {
+                    MessageHelper.ShowWarning($"{studentName} is already marked as graduated.");
+                    return;
+                }
+
+                var confirm = MessageHelper.ShowConfirm(
+                    $"Mark \"{studentName}\" as Graduated?\n\nThis will update their enrollment status for this semester.");
+
+                if (confirm == DialogResult.Yes)
+                {
+                    try
+                    {
+                        _studentRepo.UpdateEnrollmentStatus(enrollmentId, "graduated");
+                        MessageHelper.ShowSuccess($"{studentName} has been marked as graduated.");
+                        LoadStudents();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageHelper.ShowError("Unable to update status. Please try again.\n\nDetails: " + ex.Message);
                     }
                 }
             }
@@ -353,12 +382,9 @@ namespace LibrarySystem.Forms.Students
         {
             if (tb == null) return;
             if (tb.IsHandleCreated)
-            {
                 SendMessage(tb.Handle, EM_SETCUEBANNER, (IntPtr)1, cue);
-            }
             else
             {
-                // If handle not created yet, set when created
                 void Handler(object s, EventArgs e)
                 {
                     tb.HandleCreated -= Handler;
@@ -374,7 +400,5 @@ namespace LibrarySystem.Forms.Students
             form.FormClosed += (s, ev) => LoadStudents();
             form.ShowDialog();
         }
-
-
     }
 }

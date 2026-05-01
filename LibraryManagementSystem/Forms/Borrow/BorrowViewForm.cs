@@ -18,7 +18,7 @@ namespace LibrarySystem.Forms.Borrow
             _repo = new TransactionRepository();
 
             this.Text = "Transaction Details";
-            this.Size = new Size(520, 470);
+            this.Size = new Size(520, 550);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -52,7 +52,7 @@ namespace LibrarySystem.Forms.Borrow
             _detailPanel = new Panel
             {
                 Location = new Point(25, 65),
-                Size = new Size(455, 330),
+                Size = new Size(455, 390),
                 BackColor = Color.White
             };
             this.Controls.Add(_detailPanel);
@@ -65,7 +65,7 @@ namespace LibrarySystem.Forms.Borrow
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Location = new Point(350, 405),
+                Location = new Point(350, 455),
                 Size = new Size(130, 36)
             };
             btnClose.FlatAppearance.BorderSize = 0;
@@ -90,14 +90,10 @@ namespace LibrarySystem.Forms.Borrow
 
                 string statusVal = row["status"].ToString();
                 Color statusColor;
-                if (statusVal == "borrowed")
-                    statusColor = Color.FromArgb(39, 174, 96);
-                else if (statusVal == "overdue")
-                    statusColor = Color.FromArgb(231, 76, 60);
-                else if (statusVal == "returned")
-                    statusColor = Color.FromArgb(52, 152, 219);
-                else
-                    statusColor = Color.Gray;
+                if (statusVal == "borrowed") statusColor = Color.FromArgb(39, 174, 96);
+                else if (statusVal == "overdue") statusColor = Color.FromArgb(231, 76, 60);
+                else if (statusVal == "returned") statusColor = Color.FromArgb(52, 152, 219);
+                else statusColor = Color.Gray;
 
                 string returnedDate = (row["returned_date"] == DBNull.Value)
                     ? "Not yet returned"
@@ -114,6 +110,39 @@ namespace LibrarySystem.Forms.Borrow
                 AddDetailRow("Returned Date", returnedDate, Color.Empty, ref y);
                 AddDetailRow("Status", statusVal.ToUpper(), statusColor, ref y);
                 AddDetailRow("Remarks", string.IsNullOrEmpty(row["remarks"].ToString()) ? "--" : row["remarks"].ToString(), Color.Empty, ref y);
+
+                // Fine section
+                if (row["fine_amount"] != DBNull.Value)
+                {
+                    y += 8;
+                    Panel fineDivider = new Panel
+                    {
+                        Location = new Point(15, y),
+                        Size = new Size(425, 1),
+                        BackColor = Color.FromArgb(231, 76, 60)
+                    };
+                    _detailPanel.Controls.Add(fineDivider);
+                    y += 10;
+
+                    decimal fineAmount = Convert.ToDecimal(row["fine_amount"]);
+                    int daysOverdue = Convert.ToInt32(row["days_overdue"]);
+                    string fineStatus = row["fine_status"].ToString();
+                    string paidAt = row["paid_at"] == DBNull.Value
+                        ? "--"
+                        : Convert.ToDateTime(row["paid_at"]).ToString("MMM dd, yyyy hh:mm tt");
+
+                    Color fineColor = fineStatus == "paid"
+                        ? Color.FromArgb(39, 174, 96)
+                        : Color.FromArgb(231, 76, 60);
+
+                    AddDetailRow("Days Overdue", daysOverdue + " day(s)", Color.FromArgb(231, 76, 60), ref y);
+                    AddDetailRow("Fine Amount", "₱" + fineAmount.ToString("N2"), Color.FromArgb(231, 76, 60), ref y);
+                    AddDetailRow("Fine Status", fineStatus.ToUpper(), fineColor, ref y);
+                    AddDetailRow("Paid At", paidAt, Color.Empty, ref y);
+
+                    this.Size = new Size(520, 560);
+                    _detailPanel.Size = new Size(455, 420);
+                }
             }
             catch (Exception ex)
             {

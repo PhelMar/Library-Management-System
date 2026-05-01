@@ -1,4 +1,4 @@
-﻿using LibrarySystem.Core.Helpers;
+using LibrarySystem.Core.Helpers;
 using LibrarySystem.Repositories;
 using System;
 using System.Data;
@@ -8,13 +8,10 @@ using System.Windows.Forms;
 
 namespace LibrarySystem.Forms.Books
 {
-    public class ManageBooksPanel : Panel
+    public class ArchivedBooksPanel : Panel
     {
         private DataGridView dgvBooks;
         private TextBox txtSearch;
-        private ComboBox cmbCategory;
-        private ComboBox cmbSort;
-        private Button btnAddBook;
         private Label lblPagination;
         private Button btnPrev, btnNext;
 
@@ -29,14 +26,13 @@ namespace LibrarySystem.Forms.Books
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, string lParam);
 
-        public ManageBooksPanel()
+        public ArchivedBooksPanel()
         {
             _bookRepo = new BookRepository();
             this.Dock = DockStyle.Fill;
             this.BackColor = Color.FromArgb(245, 245, 255);
             this.Padding = new Padding(25, 20, 25, 20);
             BuildUI();
-            LoadCategories();
             LoadBooks();
         }
 
@@ -59,7 +55,7 @@ namespace LibrarySystem.Forms.Books
             var titlePanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
             var lblTitle = new Label
             {
-                Text = "Manage Books",
+                Text = "Archived Books",
                 Font = new Font("Segoe UI", 20f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(40, 30, 80),
                 Location = new Point(0, 10),
@@ -73,50 +69,13 @@ namespace LibrarySystem.Forms.Books
             {
                 Font = new Font("Segoe UI", 10f),
                 Location = new Point(0, 11),
-                Size = new Size(220, 32),
+                Size = new Size(280, 32),
                 BorderStyle = BorderStyle.FixedSingle
             };
-            SetCueBanner(txtSearch, "Search title, author...");
+            SetCueBanner(txtSearch, "Search title, author or category...");
             txtSearch.TextChanged += (s, e) => { _currentPage = 1; LoadBooks(); };
 
-            cmbCategory = new ComboBox
-            {
-                Font = new Font("Segoe UI", 10f),
-                Location = new Point(228, 11),
-                Size = new Size(160, 32),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            cmbCategory.SelectedIndexChanged += (s, e) => { _currentPage = 1; LoadBooks(); };
-
-            cmbSort = new ComboBox
-            {
-                Font = new Font("Segoe UI", 10f),
-                Location = new Point(396, 11),
-                Size = new Size(160, 32),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            cmbSort.Items.AddRange(new[] { "Newest First", "Title A-Z", "Title Z-A", "Author A-Z", "Author Z-A" });
-            cmbSort.SelectedIndex = 0;
-            cmbSort.SelectedIndexChanged += (s, e) => { _currentPage = 1; LoadBooks(); };
-
-            btnAddBook = new Button
-            {
-                Text = "+ Add Book",
-                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-                BackColor = Color.FromArgb(95, 75, 180),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                Size = new Size(130, 34),
-                Location = new Point(564, 9)
-            };
-            btnAddBook.FlatAppearance.BorderSize = 0;
-            btnAddBook.Click += BtnAddBook_Click;
-
             topBar.Controls.Add(txtSearch);
-            topBar.Controls.Add(cmbCategory);
-            topBar.Controls.Add(cmbSort);
-            topBar.Controls.Add(btnAddBook);
 
             dgvBooks = new DataGridView
             {
@@ -161,16 +120,14 @@ namespace LibrarySystem.Forms.Books
             };
 
             dgvBooks.Columns.Add(new DataGridViewTextBoxColumn { Name = "colNo", HeaderText = "No.", FillWeight = 5, MinimumWidth = 50 });
-            dgvBooks.Columns.Add(new DataGridViewTextBoxColumn { Name = "colTitle", HeaderText = "Title", FillWeight = 30 });
-            dgvBooks.Columns.Add(new DataGridViewTextBoxColumn { Name = "colAuthor", HeaderText = "Author", FillWeight = 20 });
-            dgvBooks.Columns.Add(new DataGridViewTextBoxColumn { Name = "colCategory", HeaderText = "Category", FillWeight = 15 });
+            dgvBooks.Columns.Add(new DataGridViewTextBoxColumn { Name = "colTitle", HeaderText = "Title", FillWeight = 28 });
+            dgvBooks.Columns.Add(new DataGridViewTextBoxColumn { Name = "colAuthor", HeaderText = "Author", FillWeight = 18 });
+            dgvBooks.Columns.Add(new DataGridViewTextBoxColumn { Name = "colCategory", HeaderText = "Category", FillWeight = 13 });
             dgvBooks.Columns.Add(new DataGridViewTextBoxColumn { Name = "colIsbn", HeaderText = "ISBN", FillWeight = 12 });
             dgvBooks.Columns.Add(new DataGridViewTextBoxColumn { Name = "colEdition", HeaderText = "Edition", FillWeight = 10 });
             dgvBooks.Columns.Add(new DataGridViewTextBoxColumn { Name = "colYear", HeaderText = "Year", FillWeight = 8 });
 
-            dgvBooks.Columns.Add(new DataGridViewButtonColumn { Name = "colView", HeaderText = "", Text = "View", UseColumnTextForButtonValue = true, FillWeight = 8 });
-            dgvBooks.Columns.Add(new DataGridViewButtonColumn { Name = "colEdit", HeaderText = "", Text = "Edit", UseColumnTextForButtonValue = true, FillWeight = 8 });
-            dgvBooks.Columns.Add(new DataGridViewButtonColumn { Name = "colArchive", HeaderText = "", Text = "Archive", UseColumnTextForButtonValue = true, FillWeight = 10 });
+            dgvBooks.Columns.Add(new DataGridViewButtonColumn { Name = "colRestore", HeaderText = "", Text = "Restore", UseColumnTextForButtonValue = true, FillWeight = 10 });
 
             dgvBooks.CellContentClick += DgvBooks_CellContentClick;
             dgvBooks.CellFormatting += DgvBooks_CellFormatting;
@@ -191,16 +148,14 @@ namespace LibrarySystem.Forms.Books
             btnPrev.FlatAppearance.BorderSize = 0;
             btnPrev.Click += (s, e) => { if (_currentPage > 1) { _currentPage--; LoadBooks(); } };
 
-            var lblPagination2 = new Label
+            lblPagination = new Label
             {
-                Name = "lblPagination",
                 Text = "Page 1 of 1",
                 Font = new Font("Segoe UI", 10f),
                 ForeColor = Color.FromArgb(40, 30, 80),
                 Location = new Point(90, 13),
                 AutoSize = true
             };
-            lblPagination = lblPagination2;
 
             btnNext = new Button
             {
@@ -246,51 +201,12 @@ namespace LibrarySystem.Forms.Books
             }
         }
 
-        private void LoadCategories()
-        {
-            try
-            {
-                var categories = _bookRepo.GetCategories();
-                cmbCategory.Items.Clear();
-                cmbCategory.Items.Add(new { Id = 0, Name = "All Categories" });
-
-                foreach (DataRow row in categories.Rows)
-                    cmbCategory.Items.Add(new { Id = Convert.ToInt32(row["id"]), Name = row["category_name"].ToString() });
-
-                cmbCategory.DisplayMember = "Name";
-                cmbCategory.SelectedIndex = 0;
-            }
-            catch
-            {
-                cmbCategory.Items.Add(new { Id = 0, Name = "All Categories" });
-                cmbCategory.SelectedIndex = 0;
-            }
-        }
-
-        private (string sortBy, string sortDir) GetSortParams()
-        {
-            if (cmbSort.SelectedIndex == 1) return ("book_title", "ASC");
-            if (cmbSort.SelectedIndex == 2) return ("book_title", "DESC");
-            if (cmbSort.SelectedIndex == 3) return ("author", "ASC");
-            if (cmbSort.SelectedIndex == 4) return ("author", "DESC");
-            return ("created_at", "DESC");
-        }
-
         public void LoadBooks()
         {
             try
             {
                 string search = txtSearch?.Text.Trim() ?? "";
-                int categoryId = 0;
-
-                if (cmbCategory.SelectedItem != null)
-                {
-                    dynamic selected = cmbCategory.SelectedItem;
-                    categoryId = selected.Id;
-                }
-
-                var (sortBy, sortDir) = GetSortParams();
-                var result = _bookRepo.GetBooksPaged(search, _currentPage, PAGE_SIZE, out int totalCount, categoryId, sortBy, sortDir);
+                var result = _bookRepo.GetArchivedBooksPaged(search, _currentPage, PAGE_SIZE, out int totalCount);
 
                 _totalPages = (int)Math.Ceiling((double)totalCount / PAGE_SIZE);
                 if (_totalPages < 1) _totalPages = 1;
@@ -300,16 +216,16 @@ namespace LibrarySystem.Forms.Books
                 int rowNo = (_currentPage - 1) * PAGE_SIZE + 1;
                 foreach (DataRow row in result.Rows)
                 {
-                        dgvBooks.Rows.Add(
-                            rowNo++,
-                            row["book_title"],
-                            row["author"],
-                            row["category_name"],
-                            row["isbn"] == DBNull.Value ? "" : row["isbn"],
-                            row["edition"] == DBNull.Value ? "" : row["edition"],
-                            row["published_year"] == DBNull.Value ? "" : row["published_year"],
-                            "View", "Edit", "Archive"
-                        );
+                    dgvBooks.Rows.Add(
+                        rowNo++,
+                        row["book_title"],
+                        row["author"],
+                        row["category_name"],
+                        row["isbn"] == DBNull.Value ? "" : row["isbn"],
+                        row["edition"] == DBNull.Value ? "" : row["edition"],
+                        row["published_year"] == DBNull.Value ? "" : row["published_year"],
+                        "Restore"
+                    );
                     dgvBooks.Rows[dgvBooks.Rows.Count - 1].Tag = row["id"];
                 }
 
@@ -319,7 +235,7 @@ namespace LibrarySystem.Forms.Books
             }
             catch (Exception ex)
             {
-                MessageHelper.ShowError($"Unable to load books. Please try again.\n\nDetails: {ex.Message}");
+                MessageHelper.ShowError("Unable to load archived books. Please try again.\n\nDetails: " + ex.Message);
             }
         }
 
@@ -327,22 +243,14 @@ namespace LibrarySystem.Forms.Books
         {
             if (e.RowIndex < 0) return;
 
-            string col = dgvBooks.Columns[e.ColumnIndex].Name;
-
-            if (col == "colView")
+            if (dgvBooks.Columns[e.ColumnIndex].Name == "colRestore")
             {
                 var cell = dgvBooks.Rows[e.RowIndex].Cells[e.ColumnIndex] as DataGridViewButtonCell;
-                if (cell != null) { cell.Style.BackColor = Color.FromArgb(52, 152, 219); cell.Style.ForeColor = Color.White; }
-            }
-            else if (col == "colEdit")
-            {
-                var cell = dgvBooks.Rows[e.RowIndex].Cells[e.ColumnIndex] as DataGridViewButtonCell;
-                if (cell != null) { cell.Style.BackColor = Color.FromArgb(230, 126, 34); cell.Style.ForeColor = Color.White; }
-            }
-            else if (col == "colArchive")
-            {
-                var cell = dgvBooks.Rows[e.RowIndex].Cells[e.ColumnIndex] as DataGridViewButtonCell;
-                if (cell != null) { cell.Style.BackColor = Color.FromArgb(149, 165, 166); cell.Style.ForeColor = Color.White; }
+                if (cell != null)
+                {
+                    cell.Style.BackColor = Color.FromArgb(39, 174, 96);
+                    cell.Style.ForeColor = Color.White;
+                }
             }
         }
 
@@ -350,48 +258,28 @@ namespace LibrarySystem.Forms.Books
         {
             if (e.RowIndex < 0) return;
 
-            int bookId = Convert.ToInt32(dgvBooks.Rows[e.RowIndex].Tag);
-            string colName = dgvBooks.Columns[e.ColumnIndex].Name;
-
-            if (colName == "colView")
+            if (dgvBooks.Columns[e.ColumnIndex].Name == "colRestore")
             {
-                var form = new BookViewForm(bookId, openOnAddQty: false);
-                form.FormClosed += (s, ev) => LoadBooks();
-                form.ShowDialog();
-            }
-            else if (colName == "colEdit")
-            {
-                var form = new BookAddEditForm(bookId);
-                form.FormClosed += (s, ev) => LoadBooks();
-                form.ShowDialog();
-            }
-            else if (colName == "colArchive")
-            {
+                int bookId = Convert.ToInt32(dgvBooks.Rows[e.RowIndex].Tag);
                 string title = dgvBooks.Rows[e.RowIndex].Cells["colTitle"].Value?.ToString();
+
                 var confirm = MessageHelper.ShowConfirm(
-                    $"Archive \"{title}\"?\n\nThis book will be hidden from the active list but can be restored later.");
+                    $"Restore \"{title}\"?\n\nThis book will be moved back to the active books list.");
 
                 if (confirm == DialogResult.Yes)
                 {
                     try
                     {
-                        _bookRepo.ArchiveBook(bookId);
-                        MessageHelper.ShowSuccess($"\"{title}\" has been archived successfully.");
+                        _bookRepo.RestoreBook(bookId);
+                        MessageHelper.ShowSuccess($"\"{title}\" has been restored successfully.");
                         LoadBooks();
                     }
                     catch (Exception ex)
                     {
-                        MessageHelper.ShowError($"Could not archive the book. Please try again.\n\nDetails: {ex.Message}");
+                        MessageHelper.ShowError("Unable to restore the book. Please try again.\n\nDetails: " + ex.Message);
                     }
                 }
             }
-        }
-
-        private void BtnAddBook_Click(object sender, EventArgs e)
-        {
-            var form = new BookAddEditForm(0);
-            form.FormClosed += (s, ev) => LoadBooks();
-            form.ShowDialog();
         }
     }
 }

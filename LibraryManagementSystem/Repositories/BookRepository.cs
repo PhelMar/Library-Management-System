@@ -7,37 +7,58 @@ namespace LibrarySystem.Repositories
 {
     public class BookRepository
     {
-        public DataTable GetBooksPaged(string search, int page, int pageSize, out int totalCount)
+        public DataTable GetBooksPaged(
+            string search, int page, int pageSize,
+            out int totalCount,
+            int categoryId = 0,
+            string sortBy = "created_at",
+            string sortDir = "DESC")
         {
             totalCount = 0;
             var dt = new DataTable();
+
+            var allowedSorts = new[] { "book_title", "author", "created_at" };
+            if (!Array.Exists(allowedSorts, s => s == sortBy)) sortBy = "created_at";
+            if (sortDir != "ASC") sortDir = "DESC";
 
             using (var conn = DatabaseConnection.GetConnection())
             {
                 conn.Open();
 
-                string countQuery = @"
+                string baseWhere = @"
+                    WHERE b.is_archived = 0
+                    AND (@categoryId = 0 OR b.category_id = @categoryId)
+                    AND (
+                        b.book_title LIKE @search
+                        OR b.author LIKE @search
+                        OR c.category_name LIKE @search
+                    )";
+
+                string countQuery = $@"
                     SELECT COUNT(*) FROM books b
                     LEFT JOIN category c ON b.category_id = c.id
-                    WHERE b.book_title LIKE @search
-                    OR b.author LIKE @search
-                    OR c.category_name LIKE @search";
+                    {baseWhere}";
 
                 using (var cmd = new MySqlCommand(countQuery, conn))
                 {
                     cmd.Parameters.AddWithValue("@search", $"%{search}%");
+                    cmd.Parameters.AddWithValue("@categoryId", categoryId);
                     totalCount = Convert.ToInt32(cmd.ExecuteScalar());
                 }
 
-                string query = @"
-                    SELECT 
+                string query = $@"
+                    SELECT
                         b.id,
                         b.book_title,
                         b.author,
+                        b.isbn,
+                        b.edition,
+                        b.published_year,
+                        b.is_archived,
                         c.category_name,
                         b.category_id,
                         COALESCE(SUM(
-                            CASE 
+                            CASE
                                 WHEN bi.action = 'add'        THEN  bi.qty
                                 WHEN bi.action = 'lost'       THEN -bi.qty
                                 WHEN bi.action = 'damaged'    THEN -bi.qty
@@ -48,11 +69,64 @@ namespace LibrarySystem.Repositories
                     FROM books b
                     LEFT JOIN category c ON b.category_id = c.id
                     LEFT JOIN book_inventory bi ON b.id = bi.book_id
-                    WHERE b.book_title LIKE @search
-                    OR b.author LIKE @search
-                    OR c.category_name LIKE @search
-                    GROUP BY b.id, b.book_title, b.author, c.category_name, b.category_id
-                    ORDER BY b.created_at DESC
+                    {baseWhere}
+                    GROUP BY b.id, b.book_title, b.author, b.isbn, b.edition,
+                             b.published_year, b.is_archived, c.category_name, b.category_id
+                    ORDER BY b.{sortBy} {sortDir}
+                    LIMIT @pageSize OFFSET @offset";
+
+                using (var cmd = new MySqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@search", $"%{search}%");
+                    cmd.Parameters.AddWithValue("@categoryId", categoryId);
+                    cmd.Parameters.AddWithValue("@pageSize", pageSize);
+                    cmd.Parameters.AddWithValue("@offset", (page - 1) * pageSize);
+
+                    using (var adapter = new MySqlDataAdapter(cmd))
+                        adapter.Fill(dt);
+                }
+            }
+
+            return dt;
+        }
+
+        public DataTable GetArchivedBooksPaged(string search, int page, int pageSize, out int totalCount)
+        {
+            totalCount = 0;
+            var dt = new DataTable();
+
+            using (var conn = DatabaseConnection.GetConnection())
+            {
+                conn.Open();
+
+                string baseWhere = @"
+                    WHERE b.is_archived = 1
+                    AND (
+                        b.book_title LIKE @search
+                        OR b.author LIKE @search
+                        OR c.category_name LIKE @search
+                    )";
+
+                string countQuery = $@"
+                    SELECT COUNT(*) FROM books b
+                    LEFT JOIN category c ON b.category_id = c.id
+                    {baseWhere}";
+
+                using (var cmd = new MySqlCommand(countQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@search", $"%{search}%");
+                    totalCount = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+
+                string query = $@"
+                    SELECT
+                        b.id, b.book_title, b.author,
+                        b.isbn, b.edition, b.published_year,
+                        c.category_name, b.category_id
+                    FROM books b
+                    LEFT JOIN category c ON b.category_id = c.id
+                    {baseWhere}
+                    ORDER BY b.book_title ASC
                     LIMIT @pageSize OFFSET @offset";
 
                 using (var cmd = new MySqlCommand(query, conn))
@@ -78,11 +152,13 @@ namespace LibrarySystem.Repositories
                 conn.Open();
 
                 string query = @"
-                    SELECT 
-                        b.id, b.book_title, b.author, b.category_id,
+                    SELECT
+                        b.id, b.book_title, b.author,
+                        b.isbn, b.edition, b.published_year,
+                        b.category_id, b.is_archived,
                         c.category_name,
                         COALESCE(SUM(
-                            CASE 
+                            CASE
                                 WHEN bi.action = 'add'        THEN  bi.qty
                                 WHEN bi.action = 'lost'       THEN -bi.qty
                                 WHEN bi.action = 'damaged'    THEN -bi.qty
@@ -94,7 +170,8 @@ namespace LibrarySystem.Repositories
                     LEFT JOIN category c ON b.category_id = c.id
                     LEFT JOIN book_inventory bi ON b.id = bi.book_id
                     WHERE b.id = @id
-                    GROUP BY b.id, b.book_title, b.author, b.category_id, c.category_name";
+                    GROUP BY b.id, b.book_title, b.author, b.isbn, b.edition,
+                             b.published_year, b.is_archived, b.category_id, c.category_name";
 
                 using (var cmd = new MySqlCommand(query, conn))
                 {
@@ -116,7 +193,7 @@ namespace LibrarySystem.Repositories
                 conn.Open();
 
                 string query = @"
-                    SELECT 
+                    SELECT
                         bi.recorded_at, bi.action, bi.qty,
                         bi.remarks, l.full_name AS recorded_by
                     FROM book_inventory bi
@@ -151,57 +228,78 @@ namespace LibrarySystem.Repositories
             return dt;
         }
 
-        public void AddBook(string title, string author, int categoryId)
+        public void AddBook(string title, string author, int categoryId, string isbn, string edition, int? publishedYear)
         {
             using (var conn = DatabaseConnection.GetConnection())
             {
                 conn.Open();
-                string query = @"INSERT INTO books (book_title, author, category_id) 
-                                 VALUES (@title, @author, @categoryId)";
+                string query = @"
+                    INSERT INTO books (book_title, author, category_id, isbn, edition, published_year)
+                    VALUES (@title, @author, @categoryId, @isbn, @edition, @publishedYear)";
+
                 using (var cmd = new MySqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@title", title);
                     cmd.Parameters.AddWithValue("@author", author);
                     cmd.Parameters.AddWithValue("@categoryId", categoryId);
+                    cmd.Parameters.AddWithValue("@isbn", (object)isbn ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@edition", (object)edition ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@publishedYear", (object)publishedYear ?? DBNull.Value);
                     cmd.ExecuteNonQuery();
                 }
             }
         }
 
-        public void UpdateBook(int bookId, string title, string author, int categoryId)
+        public void UpdateBook(int bookId, string title, string author, int categoryId, string isbn, string edition, int? publishedYear)
         {
             using (var conn = DatabaseConnection.GetConnection())
             {
                 conn.Open();
-                string query = @"UPDATE books 
-                                 SET book_title = @title, author = @author, category_id = @categoryId 
-                                 WHERE id = @id";
+                string query = @"
+                    UPDATE books
+                    SET book_title = @title,
+                        author = @author,
+                        category_id = @categoryId,
+                        isbn = @isbn,
+                        edition = @edition,
+                        published_year = @publishedYear
+                    WHERE id = @id";
+
                 using (var cmd = new MySqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@title", title);
                     cmd.Parameters.AddWithValue("@author", author);
                     cmd.Parameters.AddWithValue("@categoryId", categoryId);
+                    cmd.Parameters.AddWithValue("@isbn", (object)isbn ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@edition", (object)edition ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@publishedYear", (object)publishedYear ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@id", bookId);
                     cmd.ExecuteNonQuery();
                 }
             }
         }
 
-        public void DeleteBook(int bookId)
+        public void ArchiveBook(int bookId)
         {
             using (var conn = DatabaseConnection.GetConnection())
             {
                 conn.Open();
-                // Delete logs first then book
-                string deleteLogs = "DELETE FROM book_inventory WHERE book_id = @id";
-                string deleteBook = "DELETE FROM books WHERE id = @id";
-
-                using (var cmd = new MySqlCommand(deleteLogs, conn))
+                string query = "UPDATE books SET is_archived = 1 WHERE id = @id";
+                using (var cmd = new MySqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@id", bookId);
                     cmd.ExecuteNonQuery();
                 }
-                using (var cmd = new MySqlCommand(deleteBook, conn))
+            }
+        }
+
+        public void RestoreBook(int bookId)
+        {
+            using (var conn = DatabaseConnection.GetConnection())
+            {
+                conn.Open();
+                string query = "UPDATE books SET is_archived = 0 WHERE id = @id";
+                using (var cmd = new MySqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@id", bookId);
                     cmd.ExecuteNonQuery();
@@ -214,10 +312,10 @@ namespace LibrarySystem.Repositories
             using (var conn = DatabaseConnection.GetConnection())
             {
                 conn.Open();
-                string query = @"INSERT INTO book_inventory 
-                                    (book_id, action, qty, remarks, recorded_by) 
-                                 VALUES 
-                                    (@bookId, @action, @qty, @remarks, @recordedBy)";
+                string query = @"
+                    INSERT INTO book_inventory (book_id, action, qty, remarks, recorded_by)
+                    VALUES (@bookId, @action, @qty, @remarks, @recordedBy)";
+
                 using (var cmd = new MySqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@bookId", bookId);

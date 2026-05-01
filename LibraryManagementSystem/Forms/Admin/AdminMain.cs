@@ -6,6 +6,8 @@ using LibrarySystem.Forms.Students;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using LibrarySystem.Forms.Reports;
+using LibrarySystem.Forms.Settings;
 
 namespace LibrarySystem.Forms
 {
@@ -29,13 +31,15 @@ namespace LibrarySystem.Forms
         private Button btnBooks;
         private Button btnUsers;
         private Button btnBorrow;
-        private Button btnReturn;
         private Button btnReports;
         private Button btnSettings;
         private Button btnLogout;
+        private Button btnArchivedBooks;
+        private Button btnFines;
 
         private void InitializeShell()
         {
+
             // ── Form Setup ─────────────────────────────────
             this.Text = "Library Management System";
             this.Size = new Size(1100, 680);
@@ -96,11 +100,13 @@ namespace LibrarySystem.Forms
             // ── Nav Buttons ────────────────────────────────
             btnDashboard = CreateNavButton("⊞  Dashboard", 140);
             btnBooks = CreateNavButton("📖  Manage Books", 190);
-            btnUsers = CreateNavButton("👤  Manage Students", 240);
-            btnBorrow = CreateNavButton("↗  Borrow Books", 290);
-            btnReturn = CreateNavButton("↙  Returned Books", 340);
-            btnReports = CreateNavButton("📊  Reports", 390);
-            btnSettings = CreateNavButton("⚙  Settings", 440);
+            btnArchivedBooks = CreateNavButton("🗄  Archived Books", 240);
+            btnUsers = CreateNavButton("👤  Manage Students", 290);
+            btnBorrow = CreateNavButton("↗  Borrow Books", 340);
+            btnFines = CreateNavButton("💰  Fines & Overdue", 390);
+            btnReports = CreateNavButton("📊  Reports", 440);
+            btnSettings = CreateNavButton("⚙  Settings", 490);
+            btnLogout = CreateNavButton("⬅  Logout", 630);
 
             // Logout at bottom
             btnLogout = CreateNavButton("⬅  Logout", 580);
@@ -114,6 +120,10 @@ namespace LibrarySystem.Forms
                 LoadPanel(new ManageBooksPanel());
                 SetActiveButton(btnBooks);
             };
+            btnArchivedBooks.Click += (s, e) => {
+                LoadPanel(new ArchivedBooksPanel());
+                SetActiveButton(btnArchivedBooks);
+            };
             btnUsers.Click += (s, e) => {
                 LoadPanel(new ManageStudentsPanel());
                 SetActiveButton(btnUsers);
@@ -124,6 +134,19 @@ namespace LibrarySystem.Forms
                 LoadPanel(new BorrowBooksPanel());
                 SetActiveButton(btnBorrow);
             };
+            btnFines.Click += (s, e) => {
+                LoadPanel(new FinesPanel());
+                SetActiveButton(btnFines);
+            };
+            btnReports.Click += (s, e) => {
+                LoadPanel(new ReportsPanel());
+                SetActiveButton(btnReports);
+            };
+
+            btnSettings.Click += (s, e) => {
+                LoadPanel(new SettingsPanel());
+                SetActiveButton(btnSettings);
+            };
 
             // ── Add to Sidebar ─────────────────────────────
             sidebar.Controls.Add(lblLibrary);
@@ -132,10 +155,11 @@ namespace LibrarySystem.Forms
             sidebar.Controls.Add(divider);
             sidebar.Controls.Add(btnDashboard);
             sidebar.Controls.Add(btnBooks);
+            sidebar.Controls.Add(btnArchivedBooks);
             sidebar.Controls.Add(btnUsers);
             sidebar.Controls.Add(btnBorrow);
-            sidebar.Controls.Add(btnReturn);
             sidebar.Controls.Add(btnReports);
+            sidebar.Controls.Add(btnFines);
             sidebar.Controls.Add(btnSettings);
             sidebar.Controls.Add(btnLogout);
 
@@ -150,6 +174,12 @@ namespace LibrarySystem.Forms
             // ── Add to Form ────────────────────────────────
             this.Controls.Add(contentArea);
             this.Controls.Add(sidebar);
+
+            if (!Session.IsAdmin)
+            {
+                btnSettings.Visible = false;
+                btnSettings.Enabled = false;
+            }
         }
 
         // ── Helpers ────────────────────────────────────────

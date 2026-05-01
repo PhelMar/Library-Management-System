@@ -127,7 +127,40 @@
     <Compile Include="Forms\Books\ManageBooksPanel.cs">
       <SubType>Component</SubType>
     </Compile>
+	  <Compile Include="Forms\Reports\ReportsPanel.cs">
+		  <SubType>Component</SubType>
+	  </Compile>
+	  <Compile Include="Forms\Settings\SettingsPanel.cs">
+		  <SubType>Component</SubType>
+	  </Compile>
+	  <Compile Include="Forms\Settings\SettingsSectionBase.cs">
+		  <SubType>Component</SubType>
+	  </Compile>
+	  <Compile Include="Forms\Settings\SchoolYearSection.cs">
+		  <SubType>Component</SubType>
+	  </Compile>
+	  <Compile Include="Forms\Settings\SemesterSection.cs">
+		  <SubType>Component</SubType>
+	  </Compile>
+	  <Compile Include="Forms\Settings\CategorySection.cs">
+		  <SubType>Component</SubType>
+	  </Compile>
+	  <Compile Include="Forms\Settings\CourseSection.cs">
+		  <SubType>Component</SubType>
+	  </Compile>
+	  <Compile Include="Forms\Settings\YearLevelSection.cs">
+		  <SubType>Component</SubType>
+	  </Compile>
+	  <Compile Include="Forms\Settings\LibrarianUserSection.cs">
+		  <SubType>Component</SubType>
+	  </Compile>
+	  <Compile Include="Forms\Books\ArchivedBooksPanel.cs">
+		  <SubType>Component</SubType>
+	  </Compile>
 	  <Compile Include="Forms\Borrow\BorrowBooksPanel.cs">
+		  <SubType>Component</SubType>
+	  </Compile>
+	  <Compile Include="Forms\Borrow\FinesPanel.cs">
 		  <SubType>Component</SubType>
 	  </Compile>
     <Compile Include="Forms\Login.cs">
@@ -150,10 +183,12 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\BookRepository.cs" />
+	  <Compile Include="Repositories\SettingsRepository.cs" />
     <Compile Include="Repositories\StudentRepository.cs" />
     <Compile Include="Repositories\TransactionRepository.cs" />
     <Compile Include="Repositories\UserRepository.cs" />
 	  <Compile Include="Repositories\DashboardRepository.cs" />
+	  <Compile Include="Repositories\ReportRepository.cs" />
     <EmbeddedResource Include="Forms\Login.resx">
       <DependentUpon>Login.cs</DependentUpon>
     </EmbeddedResource>
