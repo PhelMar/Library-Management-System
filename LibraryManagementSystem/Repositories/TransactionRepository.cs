@@ -7,7 +7,7 @@ namespace LibrarySystem.Repositories
 {
     public class TransactionRepository
     {
-        private const decimal FINE_RATE_PER_DAY = 10.00m;
+        private const decimal FINE_RATE_PER_DAY = 5.00m;
 
         private MySqlConnection GetConnection()
         {
@@ -118,12 +118,18 @@ namespace LibrarySystem.Repositories
                     b.book_title,
                     b.author,
                     c.category_name,
-                    COALESCE(SUM(
+                   COALESCE(SUM(
                         CASE
                             WHEN bi.action IN ('add','returned','correction') THEN  bi.qty
                             WHEN bi.action IN ('lost','damaged')              THEN -bi.qty
                             ELSE 0
                         END
+                    ), 0)
+                    - COALESCE((
+                        SELECT COUNT(*) 
+                        FROM book_transactions bt2 
+                        WHERE bt2.book_id = b.id 
+                        AND bt2.status IN ('borrowed','overdue')
                     ), 0) AS current_qty
                 FROM books b
                 JOIN category c         ON c.id  = b.category_id
@@ -170,13 +176,20 @@ namespace LibrarySystem.Repositories
                 try
                 {
                     string checkStock = @"
-                        SELECT COALESCE(SUM(
-                            CASE
-                                WHEN action IN ('add','returned','correction') THEN  qty
-                                WHEN action IN ('lost','damaged')              THEN -qty
-                                ELSE 0
-                            END
-                        ), 0)
+                        SELECT 
+                            COALESCE(SUM(
+                                CASE
+                                    WHEN action IN ('add','returned','correction') THEN  qty
+                                    WHEN action IN ('lost','damaged')              THEN -qty
+                                    ELSE 0
+                                END
+                            ), 0)
+                            - COALESCE((
+                                SELECT COUNT(*) 
+                                FROM book_transactions bt2 
+                                WHERE bt2.book_id = @bookId 
+                                AND bt2.status IN ('borrowed','overdue')
+                            ), 0)
                         FROM book_inventory
                         WHERE book_id = @bookId";
 
@@ -202,17 +215,6 @@ namespace LibrarySystem.Repositories
                         cmd.Parameters.AddWithValue("@dueDate", dueDate.Date);
                         cmd.Parameters.AddWithValue("@remarks",
                             string.IsNullOrWhiteSpace(remarks) ? DBNull.Value : (object)remarks);
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    string inventoryOut = @"
-                        INSERT INTO book_inventory (book_id, action, qty, remarks, recorded_by)
-                        VALUES (@bookId, 'lost', 1, 'Borrowed by student', @librarianId)";
-
-                    using (var cmd = new MySqlCommand(inventoryOut, conn, tran))
-                    {
-                        cmd.Parameters.AddWithValue("@bookId", bookId);
-                        cmd.Parameters.AddWithValue("@librarianId", librarianId);
                         cmd.ExecuteNonQuery();
                     }
 
@@ -587,7 +589,7 @@ namespace LibrarySystem.Repositories
                 bt.id,
                 e.student_id,
                 DATEDIFF(CURDATE(), bt.due_date),
-                DATEDIFF(CURDATE(), bt.due_date) * 10,
+                DATEDIFF(CURDATE(), bt.due_date) * 5,
                 'unpaid'
             FROM book_transactions bt
             JOIN enrollment e ON e.id = bt.enrollment_id
@@ -600,7 +602,7 @@ namespace LibrarySystem.Repositories
             JOIN book_transactions bt ON bt.id = f.transaction_id
             SET
                 f.days_overdue = DATEDIFF(CURDATE(), bt.due_date),
-                f.amount       = DATEDIFF(CURDATE(), bt.due_date) * 10
+                f.amount       = DATEDIFF(CURDATE(), bt.due_date) * 5
             WHERE f.status = 'unpaid'", conn))
                     cmd.ExecuteNonQuery();
             }
