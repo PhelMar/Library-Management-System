@@ -18,11 +18,12 @@ namespace LibrarySystem.Forms.Borrow
             _repo = new TransactionRepository();
 
             this.Text = "Transaction Details";
-            this.Size = new Size(520, 550);
+            this.Size = new Size(700, 580);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
+            this.AutoScroll = true;
             this.BackColor = Color.FromArgb(245, 245, 255);
 
             BuildUI();
@@ -56,21 +57,6 @@ namespace LibrarySystem.Forms.Borrow
                 BackColor = Color.White
             };
             this.Controls.Add(_detailPanel);
-
-            Button btnClose = new Button
-            {
-                Text = "Close",
-                Font = new Font("Segoe UI", 10f),
-                BackColor = Color.FromArgb(95, 75, 180),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                Location = new Point(350, 455),
-                Size = new Size(130, 36)
-            };
-            btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.Click += (s, e) => this.Close();
-            this.Controls.Add(btnClose);
         }
 
         private void LoadDetail()

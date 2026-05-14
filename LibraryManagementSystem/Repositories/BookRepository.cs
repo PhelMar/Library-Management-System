@@ -61,6 +61,7 @@ namespace LibrarySystem.Repositories
                             CASE
                                 WHEN bi.action = 'add'        THEN  bi.qty
                                 WHEN bi.action = 'lost'       THEN -bi.qty
+WHEN bi.action = 'returned'   THEN  bi.qty
                                 WHEN bi.action = 'damaged'    THEN -bi.qty
                                 WHEN bi.action = 'correction' THEN  bi.qty
                                 ELSE 0
@@ -79,6 +80,48 @@ namespace LibrarySystem.Repositories
                 {
                     cmd.Parameters.AddWithValue("@search", $"%{search}%");
                     cmd.Parameters.AddWithValue("@categoryId", categoryId);
+                    cmd.Parameters.AddWithValue("@pageSize", pageSize);
+                    cmd.Parameters.AddWithValue("@offset", (page - 1) * pageSize);
+
+                    using (var adapter = new MySqlDataAdapter(cmd))
+                        adapter.Fill(dt);
+                }
+            }
+
+            return dt;
+        }
+
+        public DataTable GetInventoryLog(int bookId, int page, int pageSize, out int totalCount)
+        {
+            totalCount = 0;
+            var dt = new DataTable();
+
+            using (var conn = DatabaseConnection.GetConnection())
+            {
+                conn.Open();
+
+                // Count total
+                string countQuery = "SELECT COUNT(*) FROM book_inventory WHERE book_id = @bookId";
+                using (var cmd = new MySqlCommand(countQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@bookId", bookId);
+                    totalCount = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+
+                // Paged data
+                string query = @"
+            SELECT
+                bi.recorded_at, bi.action, bi.qty,
+                bi.remarks, l.full_name AS recorded_by
+            FROM book_inventory bi
+            JOIN librarian l ON bi.recorded_by = l.id
+            WHERE bi.book_id = @bookId
+            ORDER BY bi.recorded_at DESC
+            LIMIT @pageSize OFFSET @offset";
+
+                using (var cmd = new MySqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@bookId", bookId);
                     cmd.Parameters.AddWithValue("@pageSize", pageSize);
                     cmd.Parameters.AddWithValue("@offset", (page - 1) * pageSize);
 
@@ -161,6 +204,7 @@ namespace LibrarySystem.Repositories
                             CASE
                                 WHEN bi.action = 'add'        THEN  bi.qty
                                 WHEN bi.action = 'lost'       THEN -bi.qty
+                                WHEN bi.action = 'returned'   THEN  bi.qty
                                 WHEN bi.action = 'damaged'    THEN -bi.qty
                                 WHEN bi.action = 'correction' THEN  bi.qty
                                 ELSE 0

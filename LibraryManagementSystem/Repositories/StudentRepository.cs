@@ -17,7 +17,8 @@ namespace LibrarySystem.Repositories
             }
         }
 
-        public DataTable GetStudentsPaged(string search, int page, int pageSize, out int totalCount)
+        public DataTable GetStudentsPaged(string search, int page, int pageSize,
+    out int totalCount, int courseId = 0)  // <-- new param
         {
             totalCount = 0;
             var dt = new DataTable();
@@ -30,67 +31,80 @@ namespace LibrarySystem.Repositories
                 if (period.schoolYearId == 0)
                     return dt;
 
-                string baseWhere = @"
-                    WHERE e.school_year_id = @schoolYearId
-                    AND   e.semester_id    = @semesterId
-                    AND (
-                        s.student_id   LIKE @search OR
-                        s.student_name LIKE @search OR
-                        c.course_code  LIKE @search
-                    )";
+                // Add course filter condition dynamically
+                string courseFilter = courseId > 0 ? "AND e.course_id = @courseId" : "";
+
+                string baseWhere = $@"
+            WHERE e.school_year_id = @schoolYearId
+            AND   e.semester_id    = @semesterId
+            {courseFilter}
+            AND (
+                s.student_id   LIKE @search OR
+                s.student_name LIKE @search OR
+                c.course_code  LIKE @search
+            )";
 
                 string countQuery = $@"
-                    SELECT COUNT(*)
-                    FROM enrollment e
-                    JOIN student    s   ON e.student_id    = s.id
-                    JOIN course     c   ON e.course_id     = c.id
-                    JOIN year_level yl  ON e.year_level_id = yl.id
-                    JOIN school_year sy ON e.school_year_id= sy.id
-                    JOIN semester   sem ON e.semester_id   = sem.id
-                    {baseWhere}";
+            SELECT COUNT(*)
+            FROM enrollment e
+            JOIN student    s   ON e.student_id    = s.id
+            JOIN course     c   ON e.course_id     = c.id
+            JOIN year_level yl  ON e.year_level_id = yl.id
+            JOIN school_year sy ON e.school_year_id= sy.id
+            JOIN semester   sem ON e.semester_id   = sem.id
+            {baseWhere}";
 
                 using (var cmd = new MySqlCommand(countQuery, conn))
                 {
                     cmd.Parameters.AddWithValue("@schoolYearId", period.schoolYearId);
                     cmd.Parameters.AddWithValue("@semesterId", period.semesterId);
                     cmd.Parameters.AddWithValue("@search", $"%{search}%");
+
+                    // Only add this param if filtering by course
+                    if (courseId > 0)
+                        cmd.Parameters.AddWithValue("@courseId", courseId);
+
                     totalCount = Convert.ToInt32(cmd.ExecuteScalar());
                 }
 
                 string query = $@"
-                    SELECT
-                        s.id,
-                        s.student_id        AS student_code,
-                        s.student_name,
-                        s.contact_no,
-                        s.email,
-                        c.id                AS course_id,
-                        c.course_code,
-                        c.course_name,
-                        yl.id               AS year_level_id,
-                        yl.level_name,
-                        sy.id               AS school_year_id,
-                        sy.year_label,
-                        sem.id              AS semester_id,
-                        sem.semester_name,
-                        e.id                AS enrollment_id,
-                        e.status,
-                        e.enrolled_at
-                    FROM enrollment e
-                    JOIN student    s   ON e.student_id     = s.id
-                    JOIN course     c   ON e.course_id      = c.id
-                    JOIN year_level yl  ON e.year_level_id  = yl.id
-                    JOIN school_year sy ON e.school_year_id = sy.id
-                    JOIN semester   sem ON e.semester_id    = sem.id
-                    {baseWhere}
-                    ORDER BY e.enrolled_at DESC
-                    LIMIT @pageSize OFFSET @offset";
+            SELECT
+                s.id,
+                s.student_id        AS student_code,
+                s.student_name,
+                s.contact_no,
+                s.email,
+                c.id                AS course_id,
+                c.course_code,
+                c.course_name,
+                yl.id               AS year_level_id,
+                yl.level_name,
+                sy.id               AS school_year_id,
+                sy.year_label,
+                sem.id              AS semester_id,
+                sem.semester_name,
+                e.id                AS enrollment_id,
+                e.status,
+                e.enrolled_at
+            FROM enrollment e
+            JOIN student    s   ON e.student_id     = s.id
+            JOIN course     c   ON e.course_id      = c.id
+            JOIN year_level yl  ON e.year_level_id  = yl.id
+            JOIN school_year sy ON e.school_year_id = sy.id
+            JOIN semester   sem ON e.semester_id    = sem.id
+            {baseWhere}
+            ORDER BY e.enrolled_at DESC
+            LIMIT @pageSize OFFSET @offset";
 
                 using (var cmd = new MySqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@schoolYearId", period.schoolYearId);
                     cmd.Parameters.AddWithValue("@semesterId", period.semesterId);
                     cmd.Parameters.AddWithValue("@search", $"%{search}%");
+
+                    if (courseId > 0)
+                        cmd.Parameters.AddWithValue("@courseId", courseId);
+
                     cmd.Parameters.AddWithValue("@pageSize", pageSize);
                     cmd.Parameters.AddWithValue("@offset", (page - 1) * pageSize);
 

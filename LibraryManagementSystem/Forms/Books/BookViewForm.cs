@@ -15,6 +15,11 @@ namespace LibrarySystem.Forms.Books
         private readonly BookRepository _bookRepo;
         private DataGridView dgvLog;
         private Label lblQty;
+        private Label lblLogPagination;       
+        private Button btnLogPrev, btnLogNext;  
+        private int _logPage = 1;             
+        private int _logTotalPages = 1;       
+        private const int LOG_PAGE_SIZE = 10;
 
         public BookViewForm(int bookId, bool openOnAddQty)
         {
@@ -32,7 +37,7 @@ namespace LibrarySystem.Forms.Books
         private void InitializeForm()
         {
             this.Text = "Book Details";
-            this.Size = new Size(700, 550);
+            this.Size = new Size(700, 580);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -99,7 +104,7 @@ namespace LibrarySystem.Forms.Books
             dgvLog = new DataGridView
             {
                 Location = new Point(20, 220),
-                Size = new Size(645, 270),
+                Size = new Size(645, 230),
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 RowHeadersVisible = false,
@@ -127,13 +132,58 @@ namespace LibrarySystem.Forms.Books
 
             this.Controls.Add(dgvLog);
 
+            btnLogPrev = new Button
+            {
+                Text = "← Prev",
+                Location = new Point(20, 460),
+                Size = new Size(75, 28),
+                Font = new Font("Segoe UI", 8f),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(95, 75, 180),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand
+            };
+            btnLogPrev.FlatAppearance.BorderSize = 0;
+            btnLogPrev.Click += (s, e) => { if (_logPage > 1) { _logPage--; LoadLog(); } };
+
+            lblLogPagination = new Label
+            {
+                Text = "Page 1 of 1",
+                Location = new Point(103, 464),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(40, 30, 80)
+            };
+
+            btnLogNext = new Button
+            {
+                Text = "Next →",
+                Location = new Point(240, 460),
+                Size = new Size(75, 28),
+                Font = new Font("Segoe UI", 8f),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(95, 75, 180),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand
+            };
+            btnLogNext.FlatAppearance.BorderSize = 0;
+            btnLogNext.Click += (s, e) => { if (_logPage < _logTotalPages) { _logPage++; LoadLog(); } };
+
+            this.Controls.Add(btnLogPrev);
+            this.Controls.Add(lblLogPagination);
+            this.Controls.Add(btnLogNext);
+
             LoadLog();
         }
 
         private void LoadLog()
         {
             dgvLog.Rows.Clear();
-            var logs = _bookRepo.GetInventoryLog(_bookId);
+
+            var logs = _bookRepo.GetInventoryLog(_bookId, _logPage, LOG_PAGE_SIZE, out int totalCount);
+
+            _logTotalPages = (int)Math.Ceiling((double)totalCount / LOG_PAGE_SIZE);
+            if (_logTotalPages < 1) _logTotalPages = 1;
 
             foreach (DataRow row in logs.Rows)
             {
@@ -145,22 +195,27 @@ namespace LibrarySystem.Forms.Books
                     row["recorded_by"]
                 );
 
-                // Color code action
                 var actionCell = dgvLog.Rows[index].Cells["colAction"];
                 switch (row["action"].ToString())
                 {
                     case "add":
                         actionCell.Style.ForeColor = Color.FromArgb(39, 174, 96);
                         break;
+                    case "returned":
+                        actionCell.Style.ForeColor = Color.FromArgb(52, 152, 219);
+                        break;
                     case "lost":
                     case "damaged":
                         actionCell.Style.ForeColor = Color.FromArgb(231, 76, 60);
                         break;
                     case "correction":
-                        actionCell.Style.ForeColor = Color.FromArgb(52, 152, 219);
+                        actionCell.Style.ForeColor = Color.FromArgb(230, 126, 34);
                         break;
                 }
             }
+            lblLogPagination.Text = $"Page {_logPage} of {_logTotalPages}";
+            btnLogPrev.Enabled = _logPage > 1;
+            btnLogNext.Enabled = _logPage < _logTotalPages;
         }
 
         private void ShowInventoryAction(string action)

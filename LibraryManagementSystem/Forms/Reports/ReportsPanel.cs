@@ -67,7 +67,9 @@ namespace LibrarySystem.Forms.Reports
                 "Books Report",
                 "Borrow & Return Report",
                 "Fines Report",
-                "Overdue Report"
+                "Overdue Report",
+                "Archived Books Report",
+                "Attendance Report"
             });
             cboReportType.SelectedIndex = 0;
             cboReportType.SelectedIndexChanged += (s, e) => ToggleFilters();
@@ -165,10 +167,11 @@ namespace LibrarySystem.Forms.Reports
 
         private void ToggleFilters()
         {
-            bool isBooksReport = cboReportType.SelectedIndex == 0;
-            cboSchoolYear.Enabled = !isBooksReport;
-            cboSemester.Enabled = !isBooksReport;
-            cboMonth.Enabled = !isBooksReport;
+            bool noFilter = cboReportType.SelectedIndex == 0
+                         || cboReportType.SelectedIndex == 4;
+            cboSchoolYear.Enabled = !noFilter;
+            cboSemester.Enabled = !noFilter;
+            cboMonth.Enabled = !noFilter;
         }
 
         private void BtnGenerate_Click(object sender, EventArgs e)
@@ -226,6 +229,13 @@ namespace LibrarySystem.Forms.Reports
                         break;
                     case 3:
                         _reportData = _repo.GetOverdueReport(schoolYearId, semesterId, month);
+                        break;
+                    case 4:
+                        _reportData = _repo.GetArchivedBooksReport();
+                        break;
+                    case 5:
+                        _reportData = _repo.GetAttendanceReport(schoolYearId, semesterId, month);
+                        _secondaryData = _repo.GetAttendanceSummaryReport(schoolYearId, semesterId, month);
                         break;
                 }
 
@@ -320,6 +330,41 @@ namespace LibrarySystem.Forms.Reports
                 y += 10;
             }
 
+            if (cboReportType.SelectedIndex == 5 && _reportData.Rows.Count > 0)
+            {
+                int totalVisits = _reportData.Rows.Count;
+
+                AddPreviewLabel(previewContent,
+                    $"Total Attendance Records: {totalVisits}",
+                    new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    Color.FromArgb(95, 75, 180), ref y, false, innerWidth);
+                y += 10;
+            }
+
+            if (cboReportType.SelectedIndex == 0 && _reportData.Rows.Count > 0)
+            {
+                int totalBooks = 0, totalArchived = 0, totalDamaged = 0, totalLost = 0;
+                int totalBorrowed = 0, totalReturned = 0;
+
+                foreach (DataRow row in _reportData.Rows)
+                {
+                    totalBooks += Convert.ToInt32(row["Total_Books"]);
+                    totalArchived += Convert.ToInt32(row["Archived"]);
+                    totalDamaged += Convert.ToInt32(row["Damaged"]);
+                    totalLost += Convert.ToInt32(row["Lost"]);
+                    totalBorrowed += Convert.ToInt32(row["Total_Borrowed"]);
+                    totalReturned += Convert.ToInt32(row["Total_Returned"]);
+                }
+
+                AddPreviewLabel(previewContent,
+                    $"Total Books: {totalBooks}   |   Archived: {totalArchived}   |   " +
+                    $"Damaged: {totalDamaged}   |   Lost: {totalLost}   |   " +
+                    $"Borrowed: {totalBorrowed}   |   Returned: {totalReturned}",
+                    new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    Color.FromArgb(95, 75, 180), ref y, false, innerWidth);
+                y += 10;
+            }
+
             // Most borrowed for books report
             if (cboReportType.SelectedIndex == 0 && _secondaryData != null && _secondaryData.Rows.Count > 0)
             {
@@ -335,6 +380,7 @@ namespace LibrarySystem.Forms.Reports
                 previewContent.Controls.Add(secondGrid);
                 y += secondGrid.Height + 20;
             }
+
 
             // Footer
             AddDivider(previewContent, ref y, innerWidth);
@@ -506,6 +552,26 @@ namespace LibrarySystem.Forms.Reports
                         g.DrawString(
                             $"Total: ₱{total:N2}   Collected: ₱{paid:N2}   Unpaid: ₱{(total - paid):N2}",
                             boldFont, new SolidBrush(Color.FromArgb(231, 76, 60)), x, y);
+                        y += 20;
+                    }
+
+                    if (cboReportType.SelectedIndex == 0)
+                    {
+                        y += 10;
+                        int tBooks = 0, tArchived = 0, tDamaged = 0, tLost = 0, tBorrowed = 0, tReturned = 0;
+                        foreach (DataRow row in _reportData.Rows)
+                        {
+                            tBooks += Convert.ToInt32(row["Total_Books"]);
+                            tArchived += Convert.ToInt32(row["Archived"]);
+                            tDamaged += Convert.ToInt32(row["Damaged"]);
+                            tLost += Convert.ToInt32(row["Lost"]);
+                            tBorrowed += Convert.ToInt32(row["Total_Borrowed"]);
+                            tReturned += Convert.ToInt32(row["Total_Returned"]);
+                        }
+                        g.DrawString(
+                            $"Total: {tBooks}   Archived: {tArchived}   Damaged: {tDamaged}   " +
+                            $"Lost: {tLost}   Borrowed: {tBorrowed}   Returned: {tReturned}",
+                            boldFont, new SolidBrush(Color.FromArgb(95, 75, 180)), x, y);
                         y += 20;
                     }
 

@@ -360,6 +360,32 @@ namespace LibrarySystem.Forms.Borrow
                 var btnCell = dgvTransactions.Rows[e.RowIndex].Cells[e.ColumnIndex] as DataGridViewButtonCell;
                 if (btnCell != null && btnCell.Value?.ToString() == "--") return;
 
+                decimal? unpaidFine = _repo.GetUnpaidFineByTransaction(transactionId);
+                if (unpaidFine.HasValue)
+                {
+                    string studentName = dgvTransactions.Rows[e.RowIndex].Cells["colStudentName"].Value?.ToString();
+
+                    var go = MessageHelper.ShowConfirm(
+                        $"⚠ Cannot return book!\n\n" +
+                        $"Student : {studentName}\n" +
+                        $"Unpaid Fine : ₱{unpaidFine.Value:N2}\n\n" +
+                        $"The fine must be paid before returning the book.\n\n" +
+                        $"Go to Fines & Overdue now to settle the payment?");
+
+                    if (go == DialogResult.Yes)
+                    {
+                        var adminMain = this.FindForm() as AdminMain;
+                        if (adminMain != null)
+                        {
+                            var finesPanel = new FinesPanel();
+                            finesPanel.SearchStudent(studentName);
+                            adminMain.LoadPanel(finesPanel);
+                        }
+                    }
+
+                    return;
+                }
+
                 int? fineAmount = _repo.GetFineAmountForReturn(transactionId);
 
                 string confirmMsg = fineAmount.HasValue
@@ -379,7 +405,7 @@ namespace LibrarySystem.Forms.Borrow
                     }
                     catch (Exception ex)
                     {
-                        MessageHelper.ShowError("Failed to process return. Please try again.\n\nDetails: " + ex.Message);
+                        MessageHelper.ShowError("Failed to process return.\n\nDetails: " + ex.Message);
                     }
                 }
             }

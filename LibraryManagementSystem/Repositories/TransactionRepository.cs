@@ -546,38 +546,64 @@ namespace LibrarySystem.Repositories
             }
         }
 
-        private void MarkOverdueAndUpdateFines()
+        public decimal? GetUnpaidFineByTransaction(int transactionId)
         {
-            try
+            using (var conn = DatabaseConnection.GetConnection())
             {
-                using (var conn = GetConnection())
-                {
-                    using (var cmd = new MySqlCommand(@"
-                        UPDATE book_transactions
-                        SET status = 'overdue'
-                        WHERE status   = 'borrowed'
-                        AND   due_date < CURDATE()", conn))
-                        cmd.ExecuteNonQuery();
+                conn.Open();
+                string query = @"
+            SELECT amount FROM fines 
+            WHERE transaction_id = @transactionId 
+            AND   status = 'unpaid'
+            LIMIT 1";
 
-                    using (var cmd = new MySqlCommand(@"
-                        INSERT INTO fines (transaction_id, student_id, days_overdue, amount, status)
-                        SELECT
-                            bt.id,
-                            e.student_id,
-                            DATEDIFF(CURDATE(), bt.due_date),
-                            DATEDIFF(CURDATE(), bt.due_date) * 10,
-                            'unpaid'
-                        FROM book_transactions bt
-                        JOIN enrollment e ON e.id = bt.enrollment_id
-                        WHERE bt.status = 'overdue'
-                        AND bt.id NOT IN (SELECT transaction_id FROM fines)
-                        ON DUPLICATE KEY UPDATE
-                            days_overdue = DATEDIFF(CURDATE(), bt.due_date),
-                            amount       = DATEDIFF(CURDATE(), bt.due_date) * 10", conn))
-                        cmd.ExecuteNonQuery();
+                using (var cmd = new MySqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@transactionId", transactionId);
+                    var result = cmd.ExecuteScalar();
+                    return result != null && result != DBNull.Value
+                        ? Convert.ToDecimal(result)
+                        : (decimal?)null;
                 }
             }
-            catch { }
+        }
+
+        public void MarkOverdueAndUpdateFines()
+        {
+            using (var conn = DatabaseConnection.GetConnection())
+            {
+                conn.Open();
+
+                using (var cmd = new MySqlCommand(@"
+            UPDATE book_transactions
+            SET status = 'overdue'
+            WHERE status   = 'borrowed'
+            AND   due_date < CURDATE()", conn))
+                    cmd.ExecuteNonQuery();
+
+                using (var cmd = new MySqlCommand(@"
+            INSERT INTO fines (transaction_id, student_id, days_overdue, amount, status)
+            SELECT
+                bt.id,
+                e.student_id,
+                DATEDIFF(CURDATE(), bt.due_date),
+                DATEDIFF(CURDATE(), bt.due_date) * 10,
+                'unpaid'
+            FROM book_transactions bt
+            JOIN enrollment e ON e.id = bt.enrollment_id
+            WHERE bt.status = 'overdue'
+            AND bt.id NOT IN (SELECT transaction_id FROM fines)", conn))
+                    cmd.ExecuteNonQuery();
+
+                using (var cmd = new MySqlCommand(@"
+            UPDATE fines f
+            JOIN book_transactions bt ON bt.id = f.transaction_id
+            SET
+                f.days_overdue = DATEDIFF(CURDATE(), bt.due_date),
+                f.amount       = DATEDIFF(CURDATE(), bt.due_date) * 10
+            WHERE f.status = 'unpaid'", conn))
+                    cmd.ExecuteNonQuery();
+            }
         }
     }
 }

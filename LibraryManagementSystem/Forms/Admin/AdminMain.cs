@@ -8,6 +8,9 @@ using System.Drawing;
 using System.Windows.Forms;
 using LibrarySystem.Forms.Reports;
 using LibrarySystem.Forms.Settings;
+using LibrarySystem.Repositories;
+using LibrarySystem.Forms;
+using LibrarySystem.Forms.Attendance;
 
 namespace LibrarySystem.Forms
 {
@@ -22,8 +25,12 @@ namespace LibrarySystem.Forms
         {
             InitializeShell();
             SetActiveButton(btnDashboard);
-            // ← Wait until form is fully loaded before injecting panel
-            this.Load += (s, e) => LoadPanel(new DashboardPanel());
+            this.Load += (s, e) =>
+            {
+                var transactionRepo = new TransactionRepository();
+                transactionRepo.MarkOverdueAndUpdateFines();
+                LoadPanel(new DashboardPanel());
+            };
         }
 
         // ── Sidebar Buttons ────────────────────────────────
@@ -36,6 +43,7 @@ namespace LibrarySystem.Forms
         private Button btnLogout;
         private Button btnArchivedBooks;
         private Button btnFines;
+        private Button btnAttendance;
 
         private void InitializeShell()
         {
@@ -102,11 +110,11 @@ namespace LibrarySystem.Forms
             btnBooks = CreateNavButton("📖  Manage Books", 190);
             btnArchivedBooks = CreateNavButton("🗄  Archived Books", 240);
             btnUsers = CreateNavButton("👤  Manage Students", 290);
-            btnBorrow = CreateNavButton("↗  Borrow Books", 340);
-            btnFines = CreateNavButton("💰  Fines & Overdue", 390);
-            btnReports = CreateNavButton("📊  Reports", 440);
-            btnSettings = CreateNavButton("⚙  Settings", 490);
-            btnLogout = CreateNavButton("⬅  Logout", 630);
+            btnAttendance = CreateNavButton("📋 Attendance", 340);
+            btnBorrow = CreateNavButton("↗  Borrow Books", 390);
+            btnFines = CreateNavButton("💰  Fines & Overdue", 440);
+            btnReports = CreateNavButton("📊  Reports", 490);
+            btnSettings = CreateNavButton("⚙  Settings", 540);
 
             // Logout at bottom
             btnLogout = CreateNavButton("⬅  Logout", 580);
@@ -127,6 +135,10 @@ namespace LibrarySystem.Forms
             btnUsers.Click += (s, e) => {
                 LoadPanel(new ManageStudentsPanel());
                 SetActiveButton(btnUsers);
+            };
+            btnAttendance.Click += (s, e) => {
+                LoadPanel(new ManageAttendancePanel());
+                SetActiveButton(btnAttendance);
             };
             btnLogout.Click += BtnLogout_Click;
 
@@ -157,6 +169,7 @@ namespace LibrarySystem.Forms
             sidebar.Controls.Add(btnBooks);
             sidebar.Controls.Add(btnArchivedBooks);
             sidebar.Controls.Add(btnUsers);
+            sidebar.Controls.Add(btnAttendance);
             sidebar.Controls.Add(btnBorrow);
             sidebar.Controls.Add(btnReports);
             sidebar.Controls.Add(btnFines);

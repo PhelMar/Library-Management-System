@@ -345,6 +345,14 @@ namespace LibrarySystem.Forms.Borrow
             }
         }
 
+        public void SearchStudent(string studentName)
+        {
+            if (txtSearch != null)
+            {
+                txtSearch.Text = studentName;
+            }
+        }
+
         private void SetCueBanner(TextBox tb, string cue)
         {
             if (tb == null) return;

@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using System.Collections.Generic;
 
 namespace LibrarySystem.Forms.Students
 {
@@ -16,6 +17,9 @@ namespace LibrarySystem.Forms.Students
         private Label lblPagination;
         private Label lblActivePeriod;
         private Button btnPrev, btnNext;
+
+        private ComboBox cmbCourseFilter;
+        private List<int> _courseIds = new List<int>();
 
         private readonly StudentRepository _studentRepo;
 
@@ -94,6 +98,43 @@ namespace LibrarySystem.Forms.Students
             SetCueBanner(txtSearch, "Search by student ID, name or course...");
             txtSearch.TextChanged += (s, e) => { _currentPage = 1; LoadStudents(); };
 
+            cmbCourseFilter = new ComboBox
+            {
+                Font = new Font("Segoe UI", 10f),
+                Location = new Point(330, 10),
+                Size = new Size(200, 32),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Cursor = Cursors.Hand,
+                FlatStyle = FlatStyle.Flat
+            };
+
+            cmbCourseFilter = new ComboBox
+            {
+                Font = new Font("Segoe UI", 10f),
+                Location = new Point(330, 10),
+                Size = new Size(200, 32),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Cursor = Cursors.Hand,
+                FlatStyle = FlatStyle.Flat
+            };
+
+            var courses = _studentRepo.GetCourses();
+
+            _courseIds.Clear();
+            _courseIds.Add(0);
+            cmbCourseFilter.Items.Add("All Courses");
+
+            foreach (DataRow row in courses.Rows)
+            {
+                _courseIds.Add(Convert.ToInt32(row["id"]));
+                cmbCourseFilter.Items.Add(row["display_name"].ToString());
+            }
+
+            cmbCourseFilter.SelectedIndex = 0;
+            cmbCourseFilter.SelectedIndexChanged += (s, e) => { _currentPage = 1; LoadStudents(); };
+
+
+
             btnAddStudent = new Button
             {
                 Text = "+ Add Student",
@@ -103,12 +144,13 @@ namespace LibrarySystem.Forms.Students
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
                 Size = new Size(140, 34),
-                Location = new Point(330, 8)
+                Location = new Point(540, 8)
             };
             btnAddStudent.FlatAppearance.BorderSize = 0;
             btnAddStudent.Click += BtnAddStudent_Click;
 
             topBar.Controls.Add(txtSearch);
+            topBar.Controls.Add(cmbCourseFilter);
             topBar.Controls.Add(btnAddStudent);
 
             dgvStudents = new DataGridView
@@ -224,7 +266,13 @@ namespace LibrarySystem.Forms.Students
             try
             {
                 string search = txtSearch?.Text.Trim() ?? "";
-                var result = _studentRepo.GetStudentsPaged(search, _currentPage, PAGE_SIZE, out int totalCount);
+
+                int courseId = 0;
+                if (cmbCourseFilter != null && cmbCourseFilter.SelectedIndex >= 0)
+                    courseId = _courseIds[cmbCourseFilter.SelectedIndex];
+
+                var result = _studentRepo.GetStudentsPaged(
+                    search, _currentPage, PAGE_SIZE, out int totalCount, courseId);
 
                 _totalPages = (int)Math.Ceiling((double)totalCount / PAGE_SIZE);
                 if (_totalPages < 1) _totalPages = 1;
@@ -250,8 +298,8 @@ namespace LibrarySystem.Forms.Students
 
                     dgvStudents.Rows[index].Tag = new int[]
                     {
-                        Convert.ToInt32(row["id"]),
-                        Convert.ToInt32(row["enrollment_id"])
+                Convert.ToInt32(row["id"]),
+                Convert.ToInt32(row["enrollment_id"])
                     };
                 }
 
